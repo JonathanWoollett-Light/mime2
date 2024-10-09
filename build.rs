@@ -16,11 +16,9 @@ fn to_identifiable(s: &str) -> String {
 }
 
 fn main() {
-    #[cfg(not(docsrs))]
-    inner();
-}
-
-fn inner() {
+    if std::env::var("DOCS_RS").is_ok() {
+        return;
+    }
     let paths = fs::read_dir("assets").unwrap();
     let mut outer = Vec::new();
     for path_result in paths {
