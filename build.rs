@@ -16,6 +16,11 @@ fn to_identifiable(s: &str) -> String {
 }
 
 fn main() {
+    #[cfg(not(docsrs))]
+    inner();
+}
+
+fn inner() {
     let paths = fs::read_dir("assets").unwrap();
     let mut outer = Vec::new();
     for path_result in paths {
