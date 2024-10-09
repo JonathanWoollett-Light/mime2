@@ -1,4 +1,4 @@
-use super::*;
+use super::Mime;
 #[doc = "\\[SMPTE\\]\\[Howard_Lukk\\]"]
 #[doc = r" ```no_run"]
 #[doc = "let media = mime2::image::ACES;"]

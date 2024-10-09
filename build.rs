@@ -74,7 +74,7 @@ fn module(entry: &DirEntry, outer: &mut Vec<TokenStream>, outer_from_str: &mut V
         pub mod #inner_ident;
     });
     let subtype_module = quote! {
-        use super::*;
+        use super::Mime;
         #(#inner)*
     };
     let module_file = format!("src/{module}.rs");
@@ -100,6 +100,7 @@ fn main() {
     }
     let out = quote! {
         #![allow(rustdoc::bare_urls)]
+        #![warn(clippy::pedantic)]
         #![cfg_attr(docsrs, feature(doc_cfg))]
         //! ```
         //! let text = mime2::text::PLAIN;
@@ -130,7 +131,7 @@ fn main() {
         #(#outer)*
     };
     let from_str = quote! {
-        use super::*;
+        use super::Mime;
         #[derive(Debug, PartialEq, Eq)]
         pub struct ParseMimeError;
         impl std::fmt::Display for ParseMimeError {

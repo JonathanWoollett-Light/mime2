@@ -1,4 +1,4 @@
-use super::*;
+use super::Mime;
 #[doc = "\\[RFC8081\\]"]
 #[doc = r" ```no_run"]
 #[doc = "let media = mime2::font::COLLECTION;"]

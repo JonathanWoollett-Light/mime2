@@ -1,4 +1,4 @@
-use super::*;
+use super::Mime;
 #[doc = "\\[RFC-ietf-mediaman-haptics-05\\]"]
 #[doc = r" ```no_run"]
 #[doc = "let media = mime2::haptics::IVS;"]

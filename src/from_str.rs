@@ -1,4 +1,4 @@
-use super::*;
+use super::Mime;
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseMimeError;
 impl std::fmt::Display for ParseMimeError {

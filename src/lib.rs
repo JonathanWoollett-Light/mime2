@@ -1,4 +1,5 @@
 #![allow(rustdoc::bare_urls)]
+#![warn(clippy::pedantic)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = r" ```"]
 #![doc = r" let text = mime2::text::PLAIN;"]

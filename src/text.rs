@@ -1,4 +1,4 @@
-use super::*;
+use super::Mime;
 #[doc = "\\[RFC6015\\]"]
 #[doc = r" ```no_run"]
 #[doc = "let media = mime2::text::_1D_INTERLEAVED_PARITYFEC;"]

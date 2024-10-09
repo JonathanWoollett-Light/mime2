@@ -1,4 +1,4 @@
-use super::*;
+use super::Mime;
 #[doc = "\\[http://www.3mf.io/specification\\]\\[_3MF\\]\\[Michael_Sweet\\]"]
 #[doc = r" ```no_run"]
 #[doc = "let media = mime2::model::_3MF;"]

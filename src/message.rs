@@ -1,4 +1,4 @@
-use super::*;
+use super::Mime;
 #[doc = "\\[RFC9292\\]"]
 #[doc = r" ```no_run"]
 #[doc = "let media = mime2::message::BHTTP;"]
