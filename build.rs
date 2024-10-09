@@ -112,6 +112,7 @@ fn main() {
             }
         }
         mod from_str;
+        pub use from_str::*;
         #[cfg(feature="http")]
         #[cfg_attr(docsrs, doc(cfg(feature = "http")))]
         impl TryFrom<Mime> for http::header::HeaderValue {
