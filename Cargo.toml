@@ -6,6 +6,7 @@ description = "MIME types that are up to date."
 license = "Apache-2.0"
 
 repository = "https://github.com/JonathanWoollett-Light/mime2"
+keywords = ["mime", "media-extensions", "media-types"]
 documentation = "https://docs.rs/mime2/"
 readme = "./README.md"
 
