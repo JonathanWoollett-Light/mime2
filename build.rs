@@ -29,6 +29,7 @@ fn module(entry: &DirEntry, outer: &mut Vec<TokenStream>, outer_from_str: &mut V
     let mut inner = Vec::new();
     let mut inner_from_str = Vec::new();
     let module = path.file_stem().unwrap().to_str().unwrap();
+    let module_doc = format!("Media types for the {module} type.");
     let inner_ident = format_ident!("{}", module);
     let body = fs::read_to_string(&path).unwrap();
     let mut reader = csv::Reader::from_reader(body.as_bytes());
@@ -71,6 +72,7 @@ fn module(entry: &DirEntry, outer: &mut Vec<TokenStream>, outer_from_str: &mut V
         });
     }
     outer.push(quote! {
+        #[doc = #module_doc]
         pub mod #inner_ident;
     });
     let subtype_module = quote! {
@@ -101,6 +103,7 @@ fn main() {
     let out = quote! {
         #![allow(rustdoc::bare_urls)]
         #![warn(clippy::pedantic)]
+        #![warn(missing_docs)]
         #![cfg_attr(docsrs, feature(doc_cfg))]
         //! ```
         //! let text = mime2::text::PLAIN;
@@ -108,9 +111,15 @@ fn main() {
         //! assert_eq!(text.subtype,"plain");
         //! assert_eq!(text.to_string(),"text/plain");
         //! ```
+        /// A media type (also known as a Multipurpose Internet Mail Extensions or MIME type)
+        /// indicates the nature and format of a document, file, or assortment of bytes. MIME types
+        /// are defined and standardized in IETF's
+        /// [RFC 6838](https://datatracker.ietf.org/doc/html/rfc6838).
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
         pub struct Mime {
+            /// Type.
             pub ttype: &'static str,
+            /// Subtype.
             pub subtype: &'static str,
         }
         impl std::fmt::Display for Mime {
@@ -132,6 +141,7 @@ fn main() {
     };
     let from_str = quote! {
         use super::Mime;
+        /// Error type for [`Mime`] [`std::str::FromStr`].
         #[derive(Debug, PartialEq, Eq)]
         pub struct ParseMimeError;
         impl std::fmt::Display for ParseMimeError {

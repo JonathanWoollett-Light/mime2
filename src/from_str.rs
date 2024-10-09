@@ -1,4 +1,5 @@
 use super::Mime;
+#[doc = r" Error type for [`Mime`] [`std::str::FromStr`]."]
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseMimeError;
 impl std::fmt::Display for ParseMimeError {
