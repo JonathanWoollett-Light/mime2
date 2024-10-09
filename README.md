@@ -1,6 +1,9 @@
 # Mime2
 
-Media-Types that are more up to date than [mime]().
+[![Crates.io](https://img.shields.io/crates/v/mime2)](https://crates.io/crates/mime2)
+[![docs](https://img.shields.io/crates/v/mime2?color=yellow&label=docs)](https://docs.rs/mime2)
+
+MIME types that are more up to date than [mime](https://github.com/hyperium/mime).
 
 ### How to update
 
