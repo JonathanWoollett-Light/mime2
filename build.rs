@@ -1,11 +1,16 @@
-use quote::quote;
 use quote::format_ident;
+use quote::quote;
 use std::fs;
 
 fn to_identifiable(s: &str) -> String {
-    let mut identifier = s.replace("+","_").replace("/","_").replace("-","_").replace(".","_").to_uppercase();
+    let mut identifier = s
+        .replace("+", "_")
+        .replace("/", "_")
+        .replace("-", "_")
+        .replace(".", "_")
+        .to_uppercase();
     if identifier.chars().next().unwrap().is_numeric() {
-        identifier.insert(0,'_');
+        identifier.insert(0, '_');
     }
     identifier
 }
@@ -18,7 +23,7 @@ fn main() {
         let path = path_result.unwrap().path();
 
         let module = path.file_stem().unwrap().to_str().unwrap();
-        let inner_ident = format_ident!("{}",module);
+        let inner_ident = format_ident!("{}", module);
         let body = fs::read_to_string(path).unwrap();
         let mut reader = csv::Reader::from_reader(body.as_bytes());
         for record_result in reader.records() {
@@ -29,14 +34,21 @@ fn main() {
             let ttype = template_iter.next().unwrap();
             let subtype = template_iter.next().unwrap();
             assert!(template_iter.next().is_none());
-            let reference = record.get(2).unwrap().replace("[","\\[").replace("]","\\]");
-            let identifier = to_identifiable(name).chars().take_while(|c|*c!=' ').collect::<String>();
-            
+            let reference = record
+                .get(2)
+                .unwrap()
+                .replace("[", "\\[")
+                .replace("]", "\\]");
+            let identifier = to_identifiable(name)
+                .chars()
+                .take_while(|c| *c != ' ')
+                .collect::<String>();
+
             let media_type = format!("let media = mime2::{ttype}::{identifier};");
             let type_test = format!("assert_eq!(media.ttype, {ttype:?});");
             let subtype_test = format!("assert_eq!(media.subtype, {subtype:?});");
             let template_test = format!("assert_eq!(media.to_string(), {template:?});");
-            
+
             let identifier = format_ident!("{identifier}");
             inner.push(quote! {
                 #[doc = #reference]
@@ -56,7 +68,7 @@ fn main() {
             }
         });
     }
-    let out = quote!{
+    let out = quote! {
         #![allow(warnings)]
         #![cfg_attr(docsrs, feature(doc_cfg))]
         //! ```
@@ -88,6 +100,8 @@ fn main() {
     std::fs::write("src/lib.rs", out.to_string()).unwrap();
     std::process::Command::new("rustfmt")
         .arg("src/lib.rs")
-        .spawn().unwrap()
-        .wait().unwrap();
+        .spawn()
+        .unwrap()
+        .wait()
+        .unwrap();
 }
