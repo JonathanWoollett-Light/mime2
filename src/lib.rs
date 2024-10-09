@@ -1,4 +1,4 @@
-#![allow(warnings)]
+#![allow(rustdoc::bare_urls)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = r" ```"]
 #![doc = r" let text = mime2::text::PLAIN;"]

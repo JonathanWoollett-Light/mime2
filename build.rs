@@ -99,7 +99,7 @@ fn main() {
         module(&entry, &mut outer, &mut outer_from_str);
     }
     let out = quote! {
-        #![allow(warnings)]
+        #![allow(rustdoc::bare_urls)]
         #![cfg_attr(docsrs, feature(doc_cfg))]
         //! ```
         //! let text = mime2::text::PLAIN;
