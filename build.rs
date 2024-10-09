@@ -1,6 +1,7 @@
 use quote::format_ident;
 use quote::quote;
 use std::fs;
+use std::process::Command;
 
 fn to_identifiable(s: &str) -> String {
     let mut identifier = s
@@ -21,13 +22,15 @@ fn main() {
     }
     let paths = fs::read_dir("assets").unwrap();
     let mut outer = Vec::new();
+    let mut outer_from_str = Vec::new();
     for path_result in paths {
         let mut inner = Vec::new();
+        let mut inner_from_str = Vec::new();
         let path = path_result.unwrap().path();
 
         let module = path.file_stem().unwrap().to_str().unwrap();
         let inner_ident = format_ident!("{}", module);
-        let body = fs::read_to_string(path).unwrap();
+        let body = fs::read_to_string(&path).unwrap();
         let mut reader = csv::Reader::from_reader(body.as_bytes());
         for record_result in reader.records() {
             let record = record_result.unwrap();
@@ -62,14 +65,32 @@ fn main() {
                 #[doc = #template_test]
                 /// ```
                 pub const #identifier: Mime = Mime { ttype: #ttype, subtype: #subtype };
-            })
+            });
+            inner_from_str.push(quote! {
+                #subtype => Ok(crate::#inner_ident::#identifier),
+            });
         }
         outer.push(quote! {
-            pub mod #inner_ident {
-                use super::*;
-                #(#inner)*
-            }
+            pub mod #inner_ident;
         });
+        let subtype_module = quote! {
+            use super::*;
+            #(#inner)*
+        };
+        let module_file = format!("src/{module}.rs");
+        fs::write(&module_file, subtype_module.to_string()).unwrap();
+        Command::new("rustfmt")
+            .arg(&module_file)
+            .spawn()
+            .unwrap()
+            .wait()
+            .unwrap();
+        outer_from_str.push(quote! {
+            #module => match subtype {
+                #(#inner_from_str)*
+                _ => Err(ParseMimeError),
+            }
+        })
     }
     let out = quote! {
         #![allow(warnings)]
@@ -90,6 +111,7 @@ fn main() {
                 write!(f, "{}/{}", self.ttype, self.subtype)
             }
         }
+        mod from_str;
         #[cfg(feature="http")]
         #[cfg_attr(docsrs, doc(cfg(feature = "http")))]
         impl TryFrom<Mime> for http::header::HeaderValue {
@@ -100,9 +122,36 @@ fn main() {
         }
         #(#outer)*
     };
-    std::fs::write("src/lib.rs", out.to_string()).unwrap();
-    std::process::Command::new("rustfmt")
-        .arg("src/lib.rs")
+    let from_str = quote! {
+        use super::*;
+        #[derive(Debug, PartialEq, Eq)]
+        pub struct ParseMimeError;
+        impl std::fmt::Display for ParseMimeError {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "Failed to find matching media type.")
+            }
+        }
+        impl std::error::Error for ParseMimeError { }
+        impl std::str::FromStr for Mime {
+            type Err = ParseMimeError;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                let mut iter = s.split('/');
+                let ttype = iter.next().ok_or(ParseMimeError)?;
+                let subtype = iter.next().ok_or(ParseMimeError)?;
+                if iter.next().is_some() {
+                    return Err(ParseMimeError);
+                }
+                match ttype {
+                    #(#outer_from_str)*
+                    _ => Err(ParseMimeError),
+                }
+            }
+        }
+    };
+    fs::write("src/from_str.rs", from_str.to_string()).unwrap();
+    fs::write("src/lib.rs", out.to_string()).unwrap();
+    Command::new("rustfmt")
+        .args(["src/lib.rs", "src/from_str.rs"])
         .spawn()
         .unwrap()
         .wait()
