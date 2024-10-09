@@ -1,19 +1,91 @@
+#![warn(clippy::pedantic)]
+
+use proc_macro2::TokenStream;
 use quote::format_ident;
 use quote::quote;
 use std::fs;
+use std::fs::DirEntry;
 use std::process::Command;
 
 fn to_identifiable(s: &str) -> String {
-    let mut identifier = s
-        .replace("+", "_")
-        .replace("/", "_")
-        .replace("-", "_")
-        .replace(".", "_")
-        .to_uppercase();
+    let mut identifier = s.replace(['+', '/', '-', '.'], "_").to_uppercase();
     if identifier.chars().next().unwrap().is_numeric() {
         identifier.insert(0, '_');
     }
     identifier
+}
+
+fn rustfmt(s: &[&str]) {
+    Command::new("rustfmt")
+        .args(s)
+        .spawn()
+        .unwrap()
+        .wait()
+        .unwrap();
+}
+
+fn module(entry: &DirEntry, outer: &mut Vec<TokenStream>, outer_from_str: &mut Vec<TokenStream>) {
+    let path = entry.path();
+    let mut inner = Vec::new();
+    let mut inner_from_str = Vec::new();
+    let module = path.file_stem().unwrap().to_str().unwrap();
+    let inner_ident = format_ident!("{}", module);
+    let body = fs::read_to_string(&path).unwrap();
+    let mut reader = csv::Reader::from_reader(body.as_bytes());
+    for record_result in reader.records() {
+        let record = record_result.unwrap();
+        let name = record.get(0).unwrap();
+        let template = record.get(1).unwrap();
+        let mut template_iter = template.split('/');
+        let ttype = template_iter.next().unwrap();
+        let subtype = template_iter.next().unwrap();
+        assert!(template_iter.next().is_none());
+        let reference = record
+            .get(2)
+            .unwrap()
+            .replace('[', "\\[")
+            .replace(']', "\\]");
+        let identifier = to_identifiable(name)
+            .chars()
+            .take_while(|c| *c != ' ')
+            .collect::<String>();
+
+        let media_type = format!("let media = mime2::{ttype}::{identifier};");
+        let type_test = format!("assert_eq!(media.ttype, {ttype:?});");
+        let subtype_test = format!("assert_eq!(media.subtype, {subtype:?});");
+        let template_test = format!("assert_eq!(media.to_string(), {template:?});");
+
+        let identifier = format_ident!("{identifier}");
+        inner.push(quote! {
+            #[doc = #reference]
+            /// ```no_run
+            #[doc = #media_type]
+            #[doc = #type_test]
+            #[doc = #subtype_test]
+            #[doc = #template_test]
+            /// ```
+            pub const #identifier: Mime = Mime { ttype: #ttype, subtype: #subtype };
+        });
+        inner_from_str.push(quote! {
+            #subtype => Ok(crate::#inner_ident::#identifier),
+        });
+    }
+    outer.push(quote! {
+        pub mod #inner_ident;
+    });
+    let subtype_module = quote! {
+        use super::*;
+        #(#inner)*
+    };
+    let module_file = format!("src/{module}.rs");
+    fs::write(&module_file, subtype_module.to_string()).unwrap();
+    rustfmt(&[&module_file]);
+    outer_from_str.push(quote! {
+        #module => match subtype {
+            #(#inner_from_str)*
+            _ => Err(ParseMimeError),
+        }
+    });
 }
 
 fn main() {
@@ -23,74 +95,8 @@ fn main() {
     let paths = fs::read_dir("assets").unwrap();
     let mut outer = Vec::new();
     let mut outer_from_str = Vec::new();
-    for path_result in paths {
-        let mut inner = Vec::new();
-        let mut inner_from_str = Vec::new();
-        let path = path_result.unwrap().path();
-
-        let module = path.file_stem().unwrap().to_str().unwrap();
-        let inner_ident = format_ident!("{}", module);
-        let body = fs::read_to_string(&path).unwrap();
-        let mut reader = csv::Reader::from_reader(body.as_bytes());
-        for record_result in reader.records() {
-            let record = record_result.unwrap();
-            let name = record.get(0).unwrap();
-            let template = record.get(1).unwrap();
-            let mut template_iter = template.split("/");
-            let ttype = template_iter.next().unwrap();
-            let subtype = template_iter.next().unwrap();
-            assert!(template_iter.next().is_none());
-            let reference = record
-                .get(2)
-                .unwrap()
-                .replace("[", "\\[")
-                .replace("]", "\\]");
-            let identifier = to_identifiable(name)
-                .chars()
-                .take_while(|c| *c != ' ')
-                .collect::<String>();
-
-            let media_type = format!("let media = mime2::{ttype}::{identifier};");
-            let type_test = format!("assert_eq!(media.ttype, {ttype:?});");
-            let subtype_test = format!("assert_eq!(media.subtype, {subtype:?});");
-            let template_test = format!("assert_eq!(media.to_string(), {template:?});");
-
-            let identifier = format_ident!("{identifier}");
-            inner.push(quote! {
-                #[doc = #reference]
-                /// ```no_run
-                #[doc = #media_type]
-                #[doc = #type_test]
-                #[doc = #subtype_test]
-                #[doc = #template_test]
-                /// ```
-                pub const #identifier: Mime = Mime { ttype: #ttype, subtype: #subtype };
-            });
-            inner_from_str.push(quote! {
-                #subtype => Ok(crate::#inner_ident::#identifier),
-            });
-        }
-        outer.push(quote! {
-            pub mod #inner_ident;
-        });
-        let subtype_module = quote! {
-            use super::*;
-            #(#inner)*
-        };
-        let module_file = format!("src/{module}.rs");
-        fs::write(&module_file, subtype_module.to_string()).unwrap();
-        Command::new("rustfmt")
-            .arg(&module_file)
-            .spawn()
-            .unwrap()
-            .wait()
-            .unwrap();
-        outer_from_str.push(quote! {
-            #module => match subtype {
-                #(#inner_from_str)*
-                _ => Err(ParseMimeError),
-            }
-        })
+    for entry in paths.map(Result::unwrap) {
+        module(&entry, &mut outer, &mut outer_from_str);
     }
     let out = quote! {
         #![allow(warnings)]
@@ -151,10 +157,5 @@ fn main() {
     };
     fs::write("src/from_str.rs", from_str.to_string()).unwrap();
     fs::write("src/lib.rs", out.to_string()).unwrap();
-    Command::new("rustfmt")
-        .args(["src/lib.rs", "src/from_str.rs"])
-        .spawn()
-        .unwrap()
-        .wait()
-        .unwrap();
+    rustfmt(&["src/lib.rs", "src/from_str.rs"]);
 }
