@@ -6,6 +6,7 @@ use quote::quote;
 use std::fs;
 use std::fs::DirEntry;
 use std::process::Command;
+use std::env::var;
 
 fn to_identifiable(s: &str) -> String {
     let mut identifier = s.replace(['+', '/', '-', '.'], "_").to_uppercase();
@@ -91,7 +92,10 @@ fn module(entry: &DirEntry, outer: &mut Vec<TokenStream>, outer_from_str: &mut V
 }
 
 fn main() {
-    if std::env::var("DOCS_RS").is_ok() {
+    if var("DOCS_RS").is_ok() {
+        return;
+    }
+    if var("REBUILD").is_err() {
         return;
     }
     let paths = fs::read_dir("assets").unwrap();
