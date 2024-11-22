@@ -106,10 +106,12 @@ fn main() {
         #![warn(missing_docs)]
         #![cfg_attr(docsrs, feature(doc_cfg))]
         //! ```
+        //! use std::str::FromStr;
         //! let text = mime2::text::PLAIN;
         //! assert_eq!(text.ttype, "text");
         //! assert_eq!(text.subtype,"plain");
         //! assert_eq!(text.to_string(),"text/plain");
+        //! assert_eq!(mime2::Mime::from_str("text/plain"), Ok(text));
         //! ```
         /// A media type (also known as a Multipurpose Internet Mail Extensions or MIME type)
         /// indicates the nature and format of a document, file, or assortment of bytes. MIME types
